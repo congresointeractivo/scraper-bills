@@ -5,6 +5,7 @@ require 'nokogiri'
 require 'httparty'
 require 'pdf-reader'
 require 'open-uri'
+require 'awesome_print'
 
 module RestfulApiMethods
 
@@ -28,29 +29,33 @@ class StorageableInfo
 	include RestfulApiMethods
 
 	def initialize(location = '')
-		@API_url = 'http://billit.ciudadanointeligente.org'
-		# @API_url = 'http://localhost:3000'
+		# @API_url = 'http://billit.ciudadanointeligente.org'
+		@API_url = 'http://localhost:3003'
 		@location = location
 	end
 
-	def process
+	def process  opts={}
+    @options = opts
+
     f = File.open('scraping_errors.txt', 'a')
 		doc_locations.each do |doc_location|
-			begin
-				puts doc_location
+			 begin
+				#puts doc_location
 				doc = read doc_location
-				puts 'read'
+				puts '#read'
 				info = get_info doc
-				puts 'got'
+				puts '#got'
 				formatted_info = format info
-				puts 'formatted'
+				puts '#formatted'
 				save formatted_info
-				puts 'saved'
-			rescue Exception=>e
-        f.puts doc_location
-        f.puts e
-        puts e
-			end
+				puts '#saved'
+				abort
+		 	rescue Exception=>e
+			 f.puts "EXCEPTION"
+	         f.puts doc_location
+	         f.puts e
+	         puts e
+		 	end
 		end
 	end
 

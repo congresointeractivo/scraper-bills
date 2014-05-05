@@ -18,3 +18,5 @@ gem 'faraday'
 gem 'activemodel'
 
 gem 'what_methods'
+
+gem "awesome_print"
