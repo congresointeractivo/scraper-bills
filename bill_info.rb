@@ -50,7 +50,7 @@ class BillInfo < StorageableInfo
     # button3:LISTAR    
 
     ### ISSUE: For pagesizes over 64, nokogiri can't parse
-    doc = get_html(@update_location, { :query => {:pagesize => 64, :tipo_de_proy => "ley"} }, "POST")
+    doc = get_html(@update_location, { :query => {:pagesize => 64, :tipo_de_proy => "ley"} }, "POST") #
 
     xml = Nokogiri::HTML(doc)
     projects = xml.xpath('//*[@id="IDSPAN"]/div/div/a[1]/@href').map {|x| x.text }
@@ -111,10 +111,10 @@ class BillInfo < StorageableInfo
     # abort
     puts "Checking if bill exists. Server responded code: " + req.code.to_s
 		if req.code == 200
-			puts "Using put."
+			puts "Updating bill."
 			put bill
 		else
-			puts "Using post."
+			puts "Creating new bill."
 			post bill
 		end
 	end
@@ -219,12 +219,13 @@ class BillInfo < StorageableInfo
     if info[:initial_chamber] == "Diputados"
       puts "diputadosUID",info[:uid]
       info[:tramite_parlamentario] = get_css html, 'body > table > tr:nth-child(2) > td'
-      info[:title] = get_css html, 'body > table > tr:nth-child(3) > td'
-      info[:source] = info[:uid].split("-")[1] if info[:uid]
+      info[:title] = get_css(html, 'body > table > tr:nth-child(3) > td').downcase.capitalize
+      info[:source] = "Diputados"
       info[:full_text] = get_css html, 'body'
       info[:authors] = get_css html, 'body > table > tr:nth-child(4) > td'
       info[:authors] = info[:authors].split(" - ") if info[:authors]
       info[:subject_areas] = get_css html, 'body > table > tr:nth-child(5) > td'
+      info[:subject_areas] = info[:subject_areas].split(";").each { |s| s.strip }
 
   		# # info[:current_priority] = xml.at_css('urgencia_actual').text() if xml.at_css('urgencia_actual')
   		# info[:stage] = xml.at_css('etapa').text() if xml.at_css('etapa')
@@ -241,13 +242,13 @@ class BillInfo < StorageableInfo
   		# end
     else
       puts "Senado",info[:uid]
-      info[:title] =  get_xpath(html, '//tr[6]/td')
-      info[:source] =   get_xpath(html, '//body/table[1]/td')
+      info[:title] =  get_xpath(html, '//tr[6]/td').downcase.capitalize
+      info[:source] =   "Senadores"
       info[:full_text] = get_xpath html, '/html/body/div[2]'
       info[:original_text_url] = doc[:texto_url]
       info[:authors] = get_xpath html, '//td/a'
       info[:subject_areas] = get_xpath html, '//th/h3'
-      info[:bill_draft_link] = "http://www.senado.gov.ar/" + get_xpath(html, '/html/body/div[3]/a/@href')
+      info[:bill_draft_link] = "http://www.senado.gov.ar" + get_xpath(html, '/html/body/div[3]/a/@href')
     end
 		info
   end

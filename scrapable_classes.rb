@@ -26,7 +26,7 @@ class StorageableInfo
 
 	def initialize(location = '')
 		# @API_url = 'http://billit.ciudadanointeligente.org'
-		@API_url = 'http://localhost:3003'
+		@API_url = 'http://localhost:3000'
 		@location = location
 	end
 
@@ -45,7 +45,6 @@ class StorageableInfo
 				puts '#formatted'
 				save formatted_info
 				puts '#saved'
-				abort
 		 	rescue Exception=>e
 			 f.puts "EXCEPTION"
 	         f.puts doc_location
