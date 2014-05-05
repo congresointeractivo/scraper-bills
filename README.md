@@ -21,12 +21,18 @@ It produces an internal Bill representation with the following data (under devel
 
 More fields to come.
 
+Then pushes that over to BillIt, where it can be consumed using a BillIt API client (https://github.com/ciudadanointeligente/api-client) or the web interface of the instance (usually http://localhost:3003/bills).
+
 #Requirements
-* A working installation of BillIt or a remote instance. Check: https://github.com/ciudadanointeligente/bill-it/
+* Linux
 * Ruby
+* A working installation of BillIt (requires MongoDB) or a remote instance. Check: https://github.com/ciudadanointeligente/bill-it/
 
 
 #Usage
+
+Modify @api_url in scrappable classes to match the BillIt instance location.
+
 ```
 cd scraper-bills
 bundle install
