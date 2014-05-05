@@ -16,3 +16,8 @@ tmp
 .yardoc
 _yardoc
 doc/
+# Bundle folder
+vendor
+# Gemfile
+# Python compiled files
+*.pyc
