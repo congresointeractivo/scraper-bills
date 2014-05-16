@@ -36,6 +36,7 @@ Modify @api_url in scrappable classes to match the BillIt instance location.
 ```
 cd scraper-bills
 bundle install
+mkdir cache
 ./bills_runner
 ```
 

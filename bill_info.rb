@@ -9,13 +9,15 @@ class BillInfo < StorageableInfo
 		super()
 		@model = 'bills'
 		@id = ''
+		@page = 1
+		@total_pages = 0;
+		@pagesize = 60
+		start_date = "01/01/2010" #start_date: get it from a webservice: HTTParty.get('http://billit.ciudadanointeligente.org/bills/last_update').body
+		end_date = "01/02/2015" #current date: Time.now.strftime("%d/%m/%Y")
 
-		start_date = "01/01/2013" #start_date: get it from a webservice: HTTParty.get('http://billit.ciudadanointeligente.org/bills/last_update').body
-    end_date = "01/01/2014" #current date: Time.now.strftime("%d/%m/%Y")
+		@update_location = "http://www1.hcdn.gov.ar/proyectos_search/resultado.asp?giro_giradoA=&odanno=&pageorig=1&fromForm=1&fecha_fin="+end_date+"&fecha_inicio="+start_date
 
-		@update_location = "http://www1.hcdn.gov.ar/proyectos_search/resultado.asp?giro_giradoA=&odanno=&pageorig=1&fromForm=1&whichpage=1&fecha_fin="+end_date+"&fecha_inicio="+start_date
-
-    @data_location = "http://www1.hcdn.gov.ar/proyectos_search/proyectomovimientos.asp?&id_proy="
+ 		@data_location = "http://www1.hcdn.gov.ar/proyectos_search/proyectomovimientos.asp?&id_proy="
 		@bills_location = 'bills'
 		@format = 'application/json'
 	end
@@ -50,35 +52,54 @@ class BillInfo < StorageableInfo
     # button3:LISTAR    
 
     ### ISSUE: For pagesizes over 64, nokogiri can't parse
-    doc = get_html(@update_location, { :query => {:pagesize => 64, :tipo_de_proy => "ley"} }, "POST") #
+    doc = get_html(@update_location + page(@page), { :query => {:pagesize => @pagesize, :tipo_de_proy => "ley"} }, "POST") #
+    ap @update_location + page(@page)
 
     xml = Nokogiri::HTML(doc)
     projects = xml.xpath('//*[@id="IDSPAN"]/div/div/a[1]/@href').map {|x| x.text }
 
-    projects_ids = xml.xpath('//*[@id="IDSPAN"]/div/div/a[2]/@href').map {|x| x.text.split("id_proy=")[1].split("\"")[0] }
+#    ap projects_ids = xml.xpath('//*[@id="IDSPAN"]/div/div/a[2]/@href').map {|x| x.text.split("id_proy=")[1].split("\"")[0] }
     locations = projects.map {|x| x.split('"')[1]}
 
-    pnum = 0
+    @total_pages = xml.xpath('/html/body/div/div[7]').text.split("de ")[1].split(" - ")[0];
+    puts "Page "+@page.to_s + " of "+@total_pages.to_s
+    @page = @page + 1
+
+    pnum = 1
     infos = xml.xpath('//ul/li/span/div').map {
       |x| 
+      plink = xml.xpath('/html/body/div/ul['+pnum.to_s+']/li/span/div/div/a[2]/@href')
+      
+      if (!plink.empty?) then
+	ap plink
+	ap "hola"+pnum.to_s
+	project_id = plink.text.split("id_proy=")[1].split("\"")[0]
+      end
       info = {}
       info[:"iniciado"] = x.text.split("Iniciado:")[1].strip.split(" ")[0]
       info[:"expediente"] = x.text.split("Iniciado:")[1].strip.split(" ")[2].split("Publicado")[0]
       info[:"publicado_en"] = x.text.split("Publicado en:")[1].split("Fecha:")[0]
       info[:"fecha_ingreso"] = x.text.split("Fecha:")[1].strip[0..9]
       info[:"texto_url"] = locations[pnum]
-      info[:"tramite_url"] = @data_location + "&tipo=tram" + projects_ids[pnum]
-      info[:"dictamen_url"] = @data_location + "&tipo=dict" + projects_ids[pnum]
-      info[:"giro_url"] = @data_location + "&tipo=giro" + projects_ids[pnum]
-      info[:"firmantes_url"] = @data_location + "&tipo=firm" + projects_ids[pnum]
+
+      if project_id then
+	      info[:"tramite_url"] = @data_location + "&tipo=tram" + project_id
+	      info[:"dictamen_url"] = @data_location + "&tipo=dict" + project_id
+	      info[:"giro_url"] = @data_location + "&tipo=giro" + project_id
+	      info[:"firmantes_url"] = @data_location + "&tipo=firm" + project_id
+      end
       pnum = pnum + 1
       # p "parsing", pnum, info
       info
     }
 
-    puts "got "+pnum.to_s+" items from " + @update_location
+    puts "got "+infos.count.to_s+" items from " + @update_location
     infos
 
+  end
+
+  def page num
+	"&whichpage="+ num.to_s
   end
 
   def get_html url, options = {}, method = "GET"
@@ -105,11 +126,12 @@ class BillInfo < StorageableInfo
     content
   end
 
-	def save bill
-    req = HTTParty.get([@API_url, @model, bill.uid].join("/"), headers: {"Accept"=>"*/*"});
-    # p req 
-    # abort
-    puts "Checking if bill exists. Server responded code: " + req.code.to_s
+  def save bill
+    if (!bill.nil? && !bill.title.nil?) then
+      req = HTTParty.get([@API_url, @model, bill.uid].join("/"), headers: {"Accept"=>"*/*"});
+      # p req 
+      # wabort
+      puts "Checking if bill exists. Server responded code: " + req.code.to_s
 		if req.code == 200
 			puts "Updating bill."
 			put bill
@@ -120,8 +142,13 @@ class BillInfo < StorageableInfo
 	end
 
 	def put bill
-    p "put bill"
-    bill.put([@API_url, @model, bill.uid].join("/"), @format)
+      p "put bill"
+      bill.put([@API_url, @model, bill.uid].join("/"), @format);
+    
+    else 
+      ap "Empty bill"
+      ap bill
+    end
   end
 
   def post bill
@@ -160,7 +187,7 @@ class BillInfo < StorageableInfo
 		# bill.directives = info[:directives]
 		# bill.remarks = info[:remarks]
 
-    ap bill
+#    ap bill
 
 		bill
 	end
@@ -175,11 +202,11 @@ class BillInfo < StorageableInfo
   end
 
   def get_css html, css
-    html.at_css(css).text.strip if html.at_css(css)
+    html.at_css(css).text.strip if html.at_css(css) else ""
   end
 
   def get_xpath html, xpath
-    html.at_xpath(xpath).text.strip if html.at_xpath(xpath)
+    html.at_xpath(xpath).text.strip if html.at_xpath(xpath) else ""
   end
 
   def get_info doc
@@ -188,6 +215,10 @@ class BillInfo < StorageableInfo
     if doc[:texto_url]
       texto_html = get_html doc[:texto_url]
       html = Nokogiri::HTML(texto_html)
+    end
+
+    if !html then ap doc; ap("no html") 
+	return {}
     end
 
     if doc[:tramite_url]
@@ -205,9 +236,10 @@ class BillInfo < StorageableInfo
       giro = Nokogiri::HTML(giro_html)
     end
 
-    firmantes_html = get_html doc[:firmantes_url]
-    firmantes = Nokogiri::HTML(firmantes_html)
-
+    if doc[:firmantes_url]
+	    firmantes_html = get_html doc[:firmantes_url]
+	    firmantes = Nokogiri::HTML(firmantes_html)
+    end
     info[:creation_date] = doc[:fecha_ingreso]
     info[:creation_document] = doc[:publicado_en]
     info[:bill_draft_link] = doc[:texto_url]
@@ -225,7 +257,7 @@ class BillInfo < StorageableInfo
       info[:authors] = get_css html, 'body > table > tr:nth-child(4) > td'
       info[:authors] = info[:authors].split(" - ") if info[:authors]
       info[:subject_areas] = get_css html, 'body > table > tr:nth-child(5) > td'
-      info[:subject_areas] = info[:subject_areas].split(";").each { |s| s.strip }
+      info[:subject_areas] = info[:subject_areas].split(";").each { |s| s.strip.gsub("\t","").gsub("  "," ").gsub("\n","") }
 
   		# # info[:current_priority] = xml.at_css('urgencia_actual').text() if xml.at_css('urgencia_actual')
   		# info[:stage] = xml.at_css('etapa').text() if xml.at_css('etapa')
@@ -242,12 +274,20 @@ class BillInfo < StorageableInfo
   		# end
     else
       puts "Senado",info[:uid]
-      info[:title] =  get_xpath(html, '//tr[6]/td').downcase.capitalize
+      info[:title] =  get_xpath(html, '//tr[6]/td')
+      if (!info[:title].empty?) then info[:title].downcase!.capitalize! end
+
       info[:source] =   "Senadores"
       info[:full_text] = get_xpath html, '/html/body/div[2]'
       info[:original_text_url] = doc[:texto_url]
-      info[:authors] = get_xpath html, '//td/a'
-      info[:subject_areas] = get_xpath html, '//th/h3'
+      info[:authors] = [];
+      info[:authors] << get_xpath(html, '//td/a')
+      info[:authors].map! { |s| s.gsub("\t","").gsub("  "," ").gsub("\n","") }
+      p info[:authors] # = info[:authors].split(" - ") if info[:authors]
+      info[:subject_areas] = []
+     info[:subject_areas]  << get_xpath(html, '//th/h3')
+      info[:subject_areas].map! { |s| s.gsub("\t","").gsub("  "," ").gsub("\n","") }
+
       info[:bill_draft_link] = "http://www.senado.gov.ar" + get_xpath(html, '/html/body/div[3]/a/@href')
     end
 		info

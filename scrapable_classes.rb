@@ -26,16 +26,16 @@ class StorageableInfo
 
 	def initialize(location = '')
 		# @API_url = 'http://billit.ciudadanointeligente.org'
-		@API_url = 'http://localhost:3000'
+		@API_url = 'http://billit.congresointeractivo.org'
 		@location = location
 	end
 
 	def process  opts={}
-    @options = opts
-
-    f = File.open('scraping_errors.txt', 'a')
+		@options = opts
+		
+		f = File.open('scraping_errors.txt', 'a')
 		doc_locations.each do |doc_location|
-			 begin
+#			 begin
 				#puts doc_location
 				doc = read doc_location
 				puts '#read'
@@ -45,12 +45,15 @@ class StorageableInfo
 				puts '#formatted'
 				save formatted_info
 				puts '#saved'
-		 	rescue Exception=>e
-			 f.puts "EXCEPTION"
-	         f.puts doc_location
-	         f.puts e
-	         puts e
-		 	end
+##		 	rescue Exception=>e
+#			 f.puts "EXCEPTION"
+#		         	f.puts doc_location
+#			         f.puts e
+#			         puts e
+#		 	end
+		end
+   		if (@total_pages.to_i > @page)
+			process(opts)
 		end
 	end
 

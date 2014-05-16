@@ -12,7 +12,7 @@ gem 'activesupport'
 gem 'json'
 
 gem 'rspec'
-gem 'billit_representers', '0.9.2'
+gem 'billit_representers'
 gem 'faraday'
 
 gem 'activemodel'

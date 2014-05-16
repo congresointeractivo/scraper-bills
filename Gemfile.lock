@@ -100,7 +100,7 @@ DEPENDENCIES
   activemodel
   activesupport
   awesome_print
-  billit_representers (= 0.9.2)
+  billit_representers
   faraday
   httparty
   json
